@@ -6,6 +6,7 @@ import {
   parsePlayerRegistration,
   type RegistrationActionState,
 } from "@/lib/registration/validation";
+import { hashPassword } from "@/lib/auth/password";
 
 const duplicateEmailMessage = "Este e-mail já está cadastrado. Use outro e-mail ou entre em contato com a gente.";
 
@@ -21,7 +22,15 @@ export async function registerPlayer(
   if (!parsed.success) return { error: parsed.error };
 
   try {
-    const result = await createPlayerAccount(parsed.data);
+    const passwordHash = await hashPassword(parsed.data.password);
+    const result = await createPlayerAccount({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      bio: parsed.data.bio,
+      location: parsed.data.location,
+      sports: parsed.data.sports,
+      passwordHash,
+    });
     if (result.kind === "invalid-sports") {
       return { error: { message: "Uma das modalidades ou níveis não está mais disponível. Atualize a página e tente novamente." } };
     }
@@ -40,7 +49,14 @@ export async function registerArena(
   if (!parsed.success) return { error: parsed.error };
 
   try {
-    const result = await createArenaAccount(parsed.data);
+    const passwordHash = await hashPassword(parsed.data.password);
+    const result = await createArenaAccount({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      location: parsed.data.location,
+      sports: parsed.data.sports,
+      passwordHash,
+    });
     if (result.kind === "invalid-sports") {
       return { error: { message: "Uma das modalidades não está mais disponível. Atualize a página e tente novamente." } };
     }

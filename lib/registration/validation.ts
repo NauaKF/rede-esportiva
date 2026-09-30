@@ -19,7 +19,7 @@ export type LocationInput = {
 export type PlayerSportInput = { sportId: number; levelId: number };
 export type SportOption = { id: number; name: string; levels: { id: number; label: string }[] };
 
-export type PlayerRegistrationInput = {
+type PlayerRegistrationFields = {
   name: string;
   email: string;
   bio: string | null;
@@ -27,11 +27,23 @@ export type PlayerRegistrationInput = {
   sports: PlayerSportInput[];
 };
 
-export type ArenaRegistrationInput = {
+export type PlayerRegistrationInput = PlayerRegistrationFields & { passwordHash: string };
+export type PlayerRegistrationFormInput = PlayerRegistrationFields & {
+  password: string;
+  passwordConfirmation: string;
+};
+
+type ArenaRegistrationFields = {
   name: string;
   email: string;
   location: LocationInput & { street: string; streetNumber: string; neighborhood: string };
   sports: number[];
+};
+
+export type ArenaRegistrationInput = ArenaRegistrationFields & { passwordHash: string };
+export type ArenaRegistrationFormInput = ArenaRegistrationFields & {
+  password: string;
+  passwordConfirmation: string;
 };
 
 export type ParsedRegistration<T> =
@@ -44,6 +56,20 @@ function readText(formData: FormData, key: string) {
   const value = formData.get(key);
   if (typeof value !== "string") return "";
   return value.trim();
+}
+
+function readPassword(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+function validatePassword(password: string, passwordConfirmation: string, fieldErrors: Record<string, string>) {
+  if (!password) fieldErrors.password = "Informe uma senha.";
+  else if (password.length < 12) fieldErrors.password = "A senha deve ter pelo menos 12 caracteres.";
+  else if (password.length > 128) fieldErrors.password = "A senha deve ter no máximo 128 caracteres.";
+
+  if (!passwordConfirmation) fieldErrors.passwordConfirmation = "Confirme sua senha.";
+  else if (password !== passwordConfirmation) fieldErrors.passwordConfirmation = "As senhas não coincidem.";
 }
 
 function readBase(formData: FormData, entityName: string) {
@@ -78,11 +104,14 @@ function readSportIds(formData: FormData): number[] | null {
   return [...new Set(ids)];
 }
 
-export function parsePlayerRegistration(formData: FormData): ParsedRegistration<PlayerRegistrationInput> {
+export function parsePlayerRegistration(formData: FormData): ParsedRegistration<PlayerRegistrationFormInput> {
   const base = readBase(formData, "player");
   const bio = readText(formData, "bio");
+  const password = readPassword(formData, "password");
+  const passwordConfirmation = readPassword(formData, "passwordConfirmation");
   const ids = readSportIds(formData);
   const sports: PlayerSportInput[] = [];
+  validatePassword(password, passwordConfirmation, base.fieldErrors);
 
   if (!ids) base.fieldErrors.sports = "A seleção de modalidades é inválida.";
   else if (ids.length === 0) base.fieldErrors.sports = "Escolha pelo menos uma modalidade.";
@@ -110,12 +139,16 @@ export function parsePlayerRegistration(formData: FormData): ParsedRegistration<
       bio: bio || null,
       location: { city: base.city, regionCode: base.regionCode },
       sports,
+      password,
+      passwordConfirmation,
     },
   };
 }
 
-export function parseArenaRegistration(formData: FormData): ParsedRegistration<ArenaRegistrationInput> {
+export function parseArenaRegistration(formData: FormData): ParsedRegistration<ArenaRegistrationFormInput> {
   const base = readBase(formData, "arena");
+  const password = readPassword(formData, "password");
+  const passwordConfirmation = readPassword(formData, "passwordConfirmation");
   const street = readText(formData, "street");
   const streetNumber = readText(formData, "streetNumber");
   const neighborhood = readText(formData, "neighborhood");
@@ -123,6 +156,7 @@ export function parseArenaRegistration(formData: FormData): ParsedRegistration<A
   const addressComplement = addressComplementValue || undefined;
   const fieldErrors = base.fieldErrors;
   const ids = readSportIds(formData);
+  validatePassword(password, passwordConfirmation, fieldErrors);
 
   if (!neighborhood) fieldErrors.neighborhood = "Informe o bairro.";
   else if (neighborhood.length > 100) fieldErrors.neighborhood = "Use no m\u00e1ximo 100 caracteres.";
@@ -146,6 +180,8 @@ export function parseArenaRegistration(formData: FormData): ParsedRegistration<A
       email: base.email,
       location: { city: base.city, regionCode: base.regionCode, street, streetNumber, neighborhood, addressComplement },
       sports: ids!,
+      password,
+      passwordConfirmation,
     },
   };
 }
