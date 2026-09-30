@@ -26,6 +26,10 @@ export function LocationFields({ includeAddress = false }: LocationFieldsProps) 
             Número <span className="text-[#b94b35]">*</span>
             <input className={inputClass} name="streetNumber" required maxLength={30} placeholder="Número" />
           </label>
+          <label className="text-sm font-medium text-[#42564a]">
+            Bairro <span className="text-[#b94b35]">*</span>
+            <input className={inputClass} name="neighborhood" autoComplete="address-level3" required maxLength={100} />
+          </label>
           <label className="text-sm font-medium text-[#42564a] sm:col-span-2">
             Complemento <span className="font-normal text-[#758179]">(opcional)</span>
             <input className={inputClass} name="addressComplement" autoComplete="address-line2" maxLength={100} placeholder="Bloco, sala ou referência" />

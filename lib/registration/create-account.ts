@@ -82,7 +82,8 @@ export async function createArenaAccount(input: ArenaRegistrationInput) {
   const locationId = crypto.randomUUID();
   const queries = [
     sql`INSERT INTO accounts (id, email, account_type, status) VALUES (${accountId}, ${input.email}, 'ARENA', 'PENDING')`,
-    sql`INSERT INTO locations (id, city, region_code) VALUES (${locationId}, ${input.location.city}, ${input.location.regionCode})`,
+    sql`INSERT INTO locations (id, city, region_code, neighborhood)
+      VALUES (${locationId}, ${input.location.city}, ${input.location.regionCode}, ${input.location.neighborhood})`,
     sql`INSERT INTO arena_profiles (account_id, name, location_id, street, street_number, address_complement)
       VALUES (${accountId}, ${input.name}, ${locationId}, ${input.location.street}, ${input.location.streetNumber}, ${input.location.addressComplement ?? null})`,
     ...input.sports.map((sportId) => sql`

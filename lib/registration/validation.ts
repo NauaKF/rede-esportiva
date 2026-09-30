@@ -30,7 +30,7 @@ export type PlayerRegistrationInput = {
 export type ArenaRegistrationInput = {
   name: string;
   email: string;
-  location: LocationInput & { street: string; streetNumber: string };
+  location: LocationInput & { street: string; streetNumber: string; neighborhood: string };
   sports: number[];
 };
 
@@ -118,10 +118,14 @@ export function parseArenaRegistration(formData: FormData): ParsedRegistration<A
   const base = readBase(formData, "arena");
   const street = readText(formData, "street");
   const streetNumber = readText(formData, "streetNumber");
+  const neighborhood = readText(formData, "neighborhood");
   const addressComplementValue = readText(formData, "addressComplement");
   const addressComplement = addressComplementValue || undefined;
   const fieldErrors = base.fieldErrors;
   const ids = readSportIds(formData);
+
+  if (!neighborhood) fieldErrors.neighborhood = "Informe o bairro.";
+  else if (neighborhood.length > 100) fieldErrors.neighborhood = "Use no m\u00e1ximo 100 caracteres.";
 
   if (!street) fieldErrors.street = "Informe a rua ou avenida.";
   else if (street.length > 200) fieldErrors.street = "Use no máximo 200 caracteres.";
@@ -140,7 +144,7 @@ export function parseArenaRegistration(formData: FormData): ParsedRegistration<A
     data: {
       name: base.name,
       email: base.email,
-      location: { city: base.city, regionCode: base.regionCode, street, streetNumber, addressComplement },
+      location: { city: base.city, regionCode: base.regionCode, street, streetNumber, neighborhood, addressComplement },
       sports: ids!,
     },
   };
