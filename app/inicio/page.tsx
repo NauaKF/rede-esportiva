@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAccount } from "@/lib/auth/require-account";
+import { LogoutButton } from "./_components/LogoutButton";
 
 export const metadata: Metadata = {
   title: "Início | Rede Esportiva",
@@ -18,7 +19,10 @@ export default async function InicioPage() {
             <span className="flex size-9 items-center justify-center rounded-xl bg-[#1f4d3a] text-lg text-white">r.</span>
             <span className="text-lg font-bold tracking-tight">Rede <span className="text-[#438260]">Esportiva</span></span>
           </Link>
-          <span className="text-xs font-semibold uppercase tracking-[0.13em] text-[#758179]">Minha conta</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.13em] text-[#758179] sm:inline">Minha conta</span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
