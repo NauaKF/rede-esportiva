@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/require-account";
 import { getPlayerProfile } from "@/lib/player/get-player-profile";
+import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
 
 export const metadata: Metadata = {
   title: "Perfil do jogador | Rede Esportiva",
@@ -42,14 +43,13 @@ export default async function PlayerProfilePage() {
             )}
 
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#438260]">Perfil de jogador</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#182b24] sm:text-4xl">{profile.name}</h1>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#182b24] sm:text-4xl">Seu perfil</h1>
 
-            {profile.bio && (
-              <section className="mt-8">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#758179]">Sobre</h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#53655c]">{profile.bio}</p>
-              </section>
-            )}
+            <section className="mt-7 border-b border-[#e7e9df] pb-8">
+              <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Edite seu nome e sua bio</h2>
+              <p className="mt-2 text-sm leading-6 text-[#64736b]">Essas informações ajudam outras pessoas a conhecer você.</p>
+              <EditPlayerProfileForm name={profile.name} bio={profile.bio} />
+            </section>
 
             <section className="mt-8 rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
               <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#758179]">Localização</h2>
