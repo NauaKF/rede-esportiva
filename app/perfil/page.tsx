@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/require-account";
 import { getPlayerProfile } from "@/lib/player/get-player-profile";
 import { getPlayerAvailabilities, getPlayerAvailabilitySports } from "@/lib/player/availability";
+import {
+  getOwnedPlayerAvailabilityInterests,
+  type PlayerAvailabilityInterest,
+  type PlayerInterestRequestStatus,
+} from "@/lib/player/get-availability-interests";
 import { AvailabilityForm } from "./_components/AvailabilityForm";
 import { CancelAvailabilityButton } from "./_components/CancelAvailabilityButton";
 import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
@@ -34,6 +39,25 @@ function formatAvailabilityTime(value: string, timeZone: string): string {
   }
 }
 
+function formatInterestDate(value: string, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone,
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+const interestStatusLabels: Record<PlayerInterestRequestStatus, string> = {
+  PENDING: "Pendente",
+  ACCEPTED: "Aceito",
+  REJECTED: "Recusado",
+  CANCELLED: "Cancelado",
+};
+
 export default async function PlayerProfilePage({
   searchParams,
 }: {
@@ -47,6 +71,15 @@ export default async function PlayerProfilePage({
   const profile = await getPlayerProfile(account.accountId);
   const availabilitySports = await getPlayerAvailabilitySports(account.accountId);
   const availabilities = await getPlayerAvailabilities(account.accountId);
+  const interestsResult = availabilities.length > 0
+    ? await getOwnedPlayerAvailabilityInterests()
+    : null;
+  const interestsByAvailability = new Map(
+    interestsResult?.kind === "ok"
+      ? interestsResult.availabilities.map(({ availabilityId, interests }) => [availabilityId, interests] as const)
+      : [],
+  );
+  const interestsLoadFailed = interestsResult !== null && interestsResult.kind !== "ok";
 
   return (
     <main className="relative flex flex-1 flex-col overflow-hidden bg-[#fbfaf6] text-[#182b24]">
@@ -132,7 +165,10 @@ export default async function PlayerProfilePage({
               <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Suas disponibilidades publicadas</h2>
               {availabilities.length > 0 ? (
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {availabilities.map((availability) => (
+                  {availabilities.map((availability) => {
+                    const interests: PlayerAvailabilityInterest[] = interestsByAvailability.get(availability.id) ?? [];
+
+                    return (
                     <li key={availability.id} className="rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
                       <h3 className="font-semibold text-[#30443a]">{availability.sportName}</h3>
                       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -146,8 +182,46 @@ export default async function PlayerProfilePage({
                         <dd className="break-words text-right text-[#30443a]">{availability.timeZone}</dd>
                       </dl>
                       <CancelAvailabilityButton availabilityId={availability.id} />
+
+                      <section className="mt-5 border-t border-[#e7e9df] pt-4">
+                        <h4 className="text-sm font-semibold text-[#30443a]">Interessados</h4>
+                        {interestsLoadFailed ? (
+                          <p role="alert" className="mt-2 text-sm text-[#9e3c2c]">
+                            Não foi possível carregar os interessados agora. Tente novamente mais tarde.
+                          </p>
+                        ) : interests.length === 0 ? (
+                          <p className="mt-2 text-sm text-[#758179]">Ainda não há interessados nesta disponibilidade.</p>
+                        ) : (
+                          <ul className="mt-3 space-y-3">
+                            {interests.map((interest, index) => {
+                              const pending = interest.status === "PENDING";
+
+                              return (
+                                <li
+                                  key={`${interest.createdAt}-${interest.name}-${index}`}
+                                  className={`rounded-xl border p-4 ${pending ? "border-[#f0d4b8] bg-[#fff8ef]" : "border-[#e7e9df] bg-white"}`}
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h5 className="font-semibold text-[#30443a]">{interest.name}</h5>
+                                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${pending ? "bg-[#f8eadb] text-[#785d3d]" : "bg-[#edf5eb] text-[#38704f]"}`}>
+                                      {interestStatusLabels[interest.status]}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-sm text-[#64736b]">
+                                    {interest.sport} · {interest.city}, {interest.region}
+                                  </p>
+                                  <p className="mt-2 text-xs text-[#758179]">
+                                    Demonstrou interesse em {formatInterestDate(interest.createdAt, availability.timeZone)}
+                                  </p>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </section>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="mt-4 rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5 text-sm leading-6 text-[#64736b]">
