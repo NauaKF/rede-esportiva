@@ -13,7 +13,8 @@ export type RegionalPlayerAvailabilityBoardFilters = {
 };
 
 export type RegionalPlayerAvailability = {
-  accountId: string;
+  availabilityId: string;
+  hasInterest: boolean;
   name: string;
   city: string;
   region: string;
@@ -29,7 +30,8 @@ export type SearchableSport = {
 };
 
 type SearchPlayerAvailabilityRow = {
-  account_id: string;
+  availability_id: string;
+  has_interest: boolean;
   name: string;
   city: string;
   region: string;
@@ -85,7 +87,13 @@ export async function getRegionalPlayerAvailabilityBoard(
   }
 
   const rows = await sql`
-    SELECT accounts.id AS account_id,
+    SELECT player_availabilities.id AS availability_id,
+           EXISTS (
+             SELECT 1
+             FROM player_interest_requests
+             WHERE player_interest_requests.availability_id = player_availabilities.id
+               AND player_interest_requests.sender_player_account_id = ${excludeAccountId}::uuid
+           ) AS has_interest,
            player_profiles.name,
            locations.city,
            locations.region_code AS region,
@@ -115,7 +123,8 @@ export async function getRegionalPlayerAvailabilityBoard(
   ` as SearchPlayerAvailabilityRow[];
 
   return rows.map((row) => ({
-    accountId: row.account_id,
+    availabilityId: row.availability_id,
+    hasInterest: row.has_interest,
     name: row.name,
     city: row.city,
     region: row.region,

@@ -10,6 +10,7 @@ import {
   type SearchableSport,
 } from "@/lib/player/search-player-availabilities";
 import { PlayerSearchFilters } from "./_components/PlayerSearchFilters";
+import { PlayerInterestButton } from "./_components/PlayerInterestButton";
 
 export const metadata: Metadata = {
   title: "Pessoas disponíveis para jogar | Rede Esportiva",
@@ -145,7 +146,7 @@ async function RegionalBoard({
       {results.length > 0 && (
         <ul className="mt-7 grid gap-4 sm:grid-cols-2">
           {results.map((result) => (
-            <li key={`${result.accountId}-${result.startsAt}-${result.endsAt}-${result.sport}`} className="rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
+            <li key={result.availabilityId} className="rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
               <p className="text-sm font-semibold text-[#438260]">{result.sport}</p>
               <h2 className="mt-1 text-lg font-semibold text-[#24382d]">{result.name}</h2>
               <p className="mt-1 text-sm text-[#64736b]">{result.city}, {result.region}</p>
@@ -159,6 +160,10 @@ async function RegionalBoard({
                   <time dateTime={result.endsAt}>{formatAvailabilityDateTime(result.endsAt, result.timeZone)}</time>
                 </dd>
               </dl>
+              <PlayerInterestButton
+                availabilityId={result.availabilityId}
+                hasInterest={result.hasInterest}
+              />
             </li>
           ))}
         </ul>
