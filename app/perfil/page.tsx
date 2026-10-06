@@ -3,6 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/require-account";
 import { getPlayerProfile } from "@/lib/player/get-player-profile";
+import { getPlayerAvailabilities, getPlayerAvailabilitySports } from "@/lib/player/availability";
+import { AvailabilityForm } from "./_components/AvailabilityForm";
+import { CancelAvailabilityButton } from "./_components/CancelAvailabilityButton";
 import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
 
 export const metadata: Metadata = {
@@ -10,12 +13,40 @@ export const metadata: Metadata = {
   description: "Perfil de jogador na Rede Esportiva.",
 };
 
-export default async function PlayerProfilePage() {
+function formatAvailabilityDate(value: string, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone }).format(new Date(value));
+  } catch {
+    return value.slice(0, 10);
+  }
+}
+
+function formatAvailabilityTime(value: string, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone,
+    }).format(new Date(value));
+  } catch {
+    return value.slice(11, 16);
+  }
+}
+
+export default async function PlayerProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ availability?: string }>;
+}) {
+  const { availability: availabilityResult } = await searchParams;
   const account = await requireAccount();
 
   if (account.accountType !== "PLAYER") redirect("/inicio");
 
   const profile = await getPlayerProfile(account.accountId);
+  const availabilitySports = await getPlayerAvailabilitySports(account.accountId);
+  const availabilities = await getPlayerAvailabilities(account.accountId);
 
   return (
     <main className="relative flex flex-1 flex-col overflow-hidden bg-[#fbfaf6] text-[#182b24]">
@@ -33,6 +64,11 @@ export default async function PlayerProfilePage() {
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-48 -left-28 size-96 rounded-full bg-[#f8e7d4] blur-3xl" />
 
       <section className="relative mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:px-8 sm:py-16">
+        {availabilityResult === "cancelled" && (
+          <p role="status" className="mb-6 rounded-xl border border-[#b7cfba] bg-[#edf5eb] px-4 py-3 text-sm leading-5 text-[#30443a]">
+            A disponibilidade foi cancelada.
+          </p>
+        )}
         {profile ? (
           <article className="rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
             {account.status === "PENDING" && (
@@ -84,6 +120,42 @@ export default async function PlayerProfilePage() {
             <p className="mt-3 text-sm leading-6 text-[#64736b]">Não foi possível localizar os dados do perfil de jogador. Tente novamente mais tarde.</p>
             <Link href="/inicio" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-[#1f4d3a] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#173b2c]">Voltar ao início</Link>
           </div>
+        )}
+        {account.accountType === "PLAYER" && (
+          <>
+            <section className="mt-8 rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
+              <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Publique sua disponibilidade</h2>
+              <AvailabilityForm sports={availabilitySports} />
+            </section>
+
+            <section className="mt-8 rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
+              <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Suas disponibilidades publicadas</h2>
+              {availabilities.length > 0 ? (
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {availabilities.map((availability) => (
+                    <li key={availability.id} className="rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
+                      <h3 className="font-semibold text-[#30443a]">{availability.sportName}</h3>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <dt className="text-[#758179]">Data</dt>
+                        <dd className="text-right text-[#30443a]">{formatAvailabilityDate(availability.startsAt, availability.timeZone)}</dd>
+                        <dt className="text-[#758179]">Início</dt>
+                        <dd className="text-right text-[#30443a]">{formatAvailabilityTime(availability.startsAt, availability.timeZone)}</dd>
+                        <dt className="text-[#758179]">Término</dt>
+                        <dd className="text-right text-[#30443a]">{formatAvailabilityTime(availability.endsAt, availability.timeZone)}</dd>
+                        <dt className="text-[#758179]">Fuso horário</dt>
+                        <dd className="break-words text-right text-[#30443a]">{availability.timeZone}</dd>
+                      </dl>
+                      <CancelAvailabilityButton availabilityId={availability.id} />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5 text-sm leading-6 text-[#64736b]">
+                  Você ainda não publicou disponibilidades.
+                </p>
+              )}
+            </section>
+          </>
         )}
       </section>
     </main>
