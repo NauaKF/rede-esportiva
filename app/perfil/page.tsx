@@ -6,12 +6,13 @@ import { getPlayerProfile } from "@/lib/player/get-player-profile";
 import { getPlayerAvailabilities, getPlayerAvailabilitySports } from "@/lib/player/availability";
 import {
   getOwnedPlayerAvailabilityInterests,
-  type PlayerAvailabilityInterest,
+  type OwnedPlayerAvailabilityInterest,
   type PlayerInterestRequestStatus,
 } from "@/lib/player/get-availability-interests";
 import { AvailabilityForm } from "./_components/AvailabilityForm";
 import { CancelAvailabilityButton } from "./_components/CancelAvailabilityButton";
 import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
+import { InterestDecisionControls } from "./_components/InterestDecisionControls";
 
 export const metadata: Metadata = {
   title: "Perfil do jogador | Rede Esportiva",
@@ -54,7 +55,7 @@ function formatInterestDate(value: string, timeZone: string): string {
 const interestStatusLabels: Record<PlayerInterestRequestStatus, string> = {
   PENDING: "Pendente",
   ACCEPTED: "Aceito",
-  REJECTED: "Recusado",
+  REJECTED: "Rejeitado",
   CANCELLED: "Cancelado",
 };
 
@@ -166,7 +167,7 @@ export default async function PlayerProfilePage({
               {availabilities.length > 0 ? (
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                   {availabilities.map((availability) => {
-                    const interests: PlayerAvailabilityInterest[] = interestsByAvailability.get(availability.id) ?? [];
+                    const interests: OwnedPlayerAvailabilityInterest[] = interestsByAvailability.get(availability.id) ?? [];
 
                     return (
                     <li key={availability.id} className="rounded-2xl border border-[#e7e9df] bg-[#fbfaf6] p-5">
@@ -193,12 +194,12 @@ export default async function PlayerProfilePage({
                           <p className="mt-2 text-sm text-[#758179]">Ainda não há interessados nesta disponibilidade.</p>
                         ) : (
                           <ul className="mt-3 space-y-3">
-                            {interests.map((interest, index) => {
+                            {interests.map((interest) => {
                               const pending = interest.status === "PENDING";
 
                               return (
                                 <li
-                                  key={`${interest.createdAt}-${interest.name}-${index}`}
+                                  key={interest.requestId}
                                   className={`rounded-xl border p-4 ${pending ? "border-[#f0d4b8] bg-[#fff8ef]" : "border-[#e7e9df] bg-white"}`}
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -213,6 +214,9 @@ export default async function PlayerProfilePage({
                                   <p className="mt-2 text-xs text-[#758179]">
                                     Demonstrou interesse em {formatInterestDate(interest.createdAt, availability.timeZone)}
                                   </p>
+                                  {pending && (
+                                    <InterestDecisionControls requestId={interest.requestId} />
+                                  )}
                                 </li>
                               );
                             })}

@@ -21,6 +21,10 @@ export type PlayerAvailabilityInterest = {
   createdAt: string;
 };
 
+export type OwnedPlayerAvailabilityInterest = PlayerAvailabilityInterest & {
+  requestId: string;
+};
+
 export type GetPlayerAvailabilityInterestsResult =
   | { kind: "ok"; interests: PlayerAvailabilityInterest[] }
   | { kind: "invalid-availability-id" }
@@ -31,7 +35,7 @@ export type GetPlayerAvailabilityInterestsResult =
 
 export type PlayerAvailabilityInterestsGroup = {
   availabilityId: string;
-  interests: PlayerAvailabilityInterest[];
+  interests: OwnedPlayerAvailabilityInterest[];
 };
 
 export type GetOwnedPlayerAvailabilityInterestsResult =
@@ -180,7 +184,7 @@ export async function getOwnedPlayerAvailabilityInterests(): Promise<GetOwnedPla
                player_interest_requests.created_at ASC
     ` as OwnedAvailabilityInterestRow[];
 
-    const groups = new Map<string, PlayerAvailabilityInterest[]>();
+    const groups = new Map<string, OwnedPlayerAvailabilityInterest[]>();
     for (const row of rows) {
       let interests = groups.get(row.availability_id);
       if (!interests) {
@@ -191,7 +195,7 @@ export async function getOwnedPlayerAvailabilityInterests(): Promise<GetOwnedPla
       if (row.request_id !== null) {
         const interest = toPlayerAvailabilityInterest(row);
         if (!interest) return { kind: "error" };
-        interests.push(interest);
+        interests.push({ ...interest, requestId: row.request_id });
       }
     }
 

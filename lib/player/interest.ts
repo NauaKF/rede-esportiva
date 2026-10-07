@@ -1,6 +1,9 @@
 import "server-only";
 
+import { requireAccount } from "@/lib/auth/require-account";
 import { sql } from "@/lib/db";
+
+export type PlayerInterestDecision = "ACCEPT" | "REJECT";
 
 export type CreatePlayerInterestRequestResult =
   | { kind: "created"; id: string }
@@ -10,10 +13,22 @@ export type CreatePlayerInterestRequestResult =
   | { kind: "duplicate" }
   | { kind: "error" };
 
+export type UpdatePlayerInterestRequestResult =
+  | { kind: "updated"; status: "ACCEPTED" | "REJECTED" }
+  | { kind: "invalid-request-id" }
+  | { kind: "invalid-action" }
+  | { kind: "not-authorized" }
+  | { kind: "not-updatable" }
+  | { kind: "error" };
+
 type InterestRequestRow = { kind: string; id: string | null };
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
+function isPlayerInterestDecision(value: unknown): value is PlayerInterestDecision {
+  return value === "ACCEPT" || value === "REJECT";
 }
 
 /** accountId must come from requireAccount(), never from client-submitted data. */
@@ -86,6 +101,42 @@ export async function createPlayerInterestRequest(input: {
     return { kind: "error" };
   } catch (error) {
     if (isUniqueViolation(error)) return { kind: "duplicate" };
+    return { kind: "error" };
+  }
+}
+
+/** Only the authenticated availability owner can decide a pending request. */
+export async function updatePlayerInterestRequest(
+  requestId: string,
+  action: PlayerInterestDecision,
+): Promise<UpdatePlayerInterestRequestResult> {
+  const account = await requireAccount();
+
+  if (account.accountType !== "PLAYER") return { kind: "not-authorized" };
+  if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(requestId)) {
+    return { kind: "invalid-request-id" };
+  }
+  if (!isPlayerInterestDecision(action)) return { kind: "invalid-action" };
+
+  const nextStatus = action === "ACCEPT" ? "ACCEPTED" : "REJECTED";
+
+  try {
+    const rows = await sql`
+      UPDATE player_interest_requests AS requests
+      SET status = ${nextStatus}
+      FROM player_availabilities AS availabilities
+      WHERE requests.id = ${requestId}::uuid
+        AND availabilities.id = requests.availability_id
+        AND availabilities.player_account_id = ${account.accountId}::uuid
+        AND requests.sender_player_account_id <> ${account.accountId}::uuid
+        AND requests.status = 'PENDING'
+      RETURNING requests.id
+    ` as { id: string }[];
+
+    return rows.length > 0
+      ? { kind: "updated", status: nextStatus }
+      : { kind: "not-updatable" };
+  } catch {
     return { kind: "error" };
   }
 }
