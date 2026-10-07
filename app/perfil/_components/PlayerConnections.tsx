@@ -2,6 +2,7 @@ import type {
   GetPlayerConnectionsResult,
   PlayerConnection,
 } from "@/lib/player/get-player-connections";
+import type { ReactNode } from "react";
 
 type RenderablePlayerConnectionsResult =
   | Extract<GetPlayerConnectionsResult, { kind: "ok" }>
@@ -9,6 +10,7 @@ type RenderablePlayerConnectionsResult =
 
 type PlayerConnectionsProps = {
   result: RenderablePlayerConnectionsResult;
+  children?: ReactNode;
 };
 
 function formatConnectedAt(value: string): string {
@@ -38,7 +40,7 @@ function ConnectionCard({ connection }: { connection: PlayerConnection }) {
   );
 }
 
-export function PlayerConnections({ result }: PlayerConnectionsProps) {
+export function PlayerConnections({ result, children }: PlayerConnectionsProps) {
   return (
     <section className="mt-8 rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
       <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Minhas conexões</h2>
@@ -58,6 +60,8 @@ export function PlayerConnections({ result }: PlayerConnectionsProps) {
           ))}
         </ul>
       )}
+
+      {children}
     </section>
   );
 }

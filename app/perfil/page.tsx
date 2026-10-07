@@ -14,6 +14,7 @@ import { AvailabilityForm } from "./_components/AvailabilityForm";
 import { CancelAvailabilityButton } from "./_components/CancelAvailabilityButton";
 import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
 import { InterestDecisionControls } from "./_components/InterestDecisionControls";
+import { PlayerConnectionChatSelector } from "./_components/PlayerConnectionChatSelector";
 import { PlayerConnections } from "./_components/PlayerConnections";
 
 export const metadata: Metadata = {
@@ -161,7 +162,17 @@ export default async function PlayerProfilePage({
         {account.accountType === "PLAYER" && (
           <>
             {connectionsResult.kind !== "not-authorized" && (
-              <PlayerConnections result={connectionsResult} />
+              <PlayerConnections result={connectionsResult}>
+                {connectionsResult.kind === "ok" && connectionsResult.connections.length > 0 && (
+                  <PlayerConnectionChatSelector
+                    connections={connectionsResult.connections.map((connection) => ({
+                      connectionId: connection.connectionId,
+                      otherPlayerName: connection.otherPlayerName,
+                      sportName: connection.sportName,
+                    }))}
+                  />
+                )}
+              </PlayerConnections>
             )}
 
             <section className="mt-8 rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
