@@ -121,6 +121,43 @@ export async function updatePlayerInterestRequest(
   const nextStatus = action === "ACCEPT" ? "ACCEPTED" : "REJECTED";
 
   try {
+    if (action === "ACCEPT") {
+      const [rows] = await sql.transaction([
+        sql`
+          WITH accepted_request AS (
+            UPDATE player_interest_requests AS requests
+            SET status = 'ACCEPTED'
+            FROM player_availabilities AS availabilities
+            WHERE requests.id = ${requestId}::uuid
+              AND availabilities.id = requests.availability_id
+              AND availabilities.player_account_id = ${account.accountId}::uuid
+              AND requests.sender_player_account_id <> ${account.accountId}::uuid
+              AND requests.status = 'PENDING'
+            RETURNING requests.id,
+                      requests.availability_id,
+                      requests.sender_player_account_id
+          ), created_connection AS (
+            INSERT INTO player_connections (
+              request_id,
+              availability_id,
+              player_one_account_id,
+              player_two_account_id
+            )
+            SELECT accepted_request.id,
+                   accepted_request.availability_id,
+                   ${account.accountId}::uuid,
+                   accepted_request.sender_player_account_id
+            FROM accepted_request
+            RETURNING request_id
+          )
+          SELECT request_id
+          FROM created_connection
+        `,
+      ]) as { request_id: string }[][];
+
+      return rows.length > 0 ? { kind: "updated", status: "ACCEPTED" } : { kind: "not-updatable" };
+    }
+
     const rows = await sql`
       UPDATE player_interest_requests AS requests
       SET status = ${nextStatus}

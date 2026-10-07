@@ -9,10 +9,12 @@ import {
   type OwnedPlayerAvailabilityInterest,
   type PlayerInterestRequestStatus,
 } from "@/lib/player/get-availability-interests";
+import { getPlayerConnections } from "@/lib/player/get-player-connections";
 import { AvailabilityForm } from "./_components/AvailabilityForm";
 import { CancelAvailabilityButton } from "./_components/CancelAvailabilityButton";
 import { EditPlayerProfileForm } from "./_components/EditPlayerProfileForm";
 import { InterestDecisionControls } from "./_components/InterestDecisionControls";
+import { PlayerConnections } from "./_components/PlayerConnections";
 
 export const metadata: Metadata = {
   title: "Perfil do jogador | Rede Esportiva",
@@ -75,6 +77,7 @@ export default async function PlayerProfilePage({
   const interestsResult = availabilities.length > 0
     ? await getOwnedPlayerAvailabilityInterests()
     : null;
+  const connectionsResult = await getPlayerConnections();
   const interestsByAvailability = new Map(
     interestsResult?.kind === "ok"
       ? interestsResult.availabilities.map(({ availabilityId, interests }) => [availabilityId, interests] as const)
@@ -157,6 +160,10 @@ export default async function PlayerProfilePage({
         )}
         {account.accountType === "PLAYER" && (
           <>
+            {connectionsResult.kind !== "not-authorized" && (
+              <PlayerConnections result={connectionsResult} />
+            )}
+
             <section className="mt-8 rounded-3xl border border-[#e5e8de] bg-white p-6 shadow-[0_18px_55px_rgba(31,77,58,0.07)] sm:p-10">
               <h2 className="text-lg font-semibold tracking-tight text-[#24382d]">Publique sua disponibilidade</h2>
               <AvailabilityForm sports={availabilitySports} />
